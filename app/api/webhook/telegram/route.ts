@@ -8,15 +8,42 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
-    if (body.message) {
-      const { message } = body;
-      const chatId = message.chat.id.toString();
-      const telegramId = message.from?.id.toString() || 'unknown';
-      const username = message.from?.username || null;
-      const firstName = message.from?.first_name || null;
+    // Extract message from various possible Telegram update formats
+    const message = body.message || body.edited_message || body.channel_post || body.edited_channel_post;
+
+    if (message) {
+      const chatId = message.chat?.id?.toString() || 'unknown_chat';
+      const telegramId = message.from?.id?.toString() || message.sender_chat?.id?.toString() || 'unknown';
+      const username = message.from?.username || message.sender_chat?.username || null;
+      const firstName = message.from?.first_name || message.sender_chat?.title || null;
       const lastName = message.from?.last_name || null;
-      const text = message.text || null;
       const messageId = message.message_id;
+
+      // Identify the media type and text content
+      let text = message.text || message.caption || '';
+      
+      let contentType = [];
+      if (message.photo) contentType.push('[Photo]');
+      if (message.video) contentType.push('[Video]');
+      if (message.video_note) contentType.push('[Video Note]');
+      if (message.document) contentType.push('[Document]');
+      if (message.sticker) contentType.push(`[Sticker: ${message.sticker.emoji || ''}]`);
+      if (message.voice) contentType.push('[Voice]');
+      if (message.audio) contentType.push('[Audio]');
+      if (message.animation) contentType.push('[GIF]');
+      if (message.poll) contentType.push(`[Poll: ${message.poll.question}]`);
+      if (message.contact) contentType.push(`[Contact: ${message.contact.first_name}]`);
+      if (message.location) contentType.push('[Location]');
+      if (message.new_chat_members) contentType.push('[User Joined]');
+      if (message.left_chat_member) contentType.push('[User Left]');
+
+      if (contentType.length > 0) {
+        text = text ? `${contentType.join(' ')} ${text}` : contentType.join(' ');
+      }
+
+      if (!text) {
+        text = '[System / Unknown Media]';
+      }
 
       // 1. Save Message
       const insertMsg = db.prepare(`
