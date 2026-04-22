@@ -1,0 +1,6 @@
+{
+  "name": "TeleDash",
+  "description": "A real-time Telegram bot dashboard for monitoring messages and user interactions with SSE updates.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["real-time-updates", "telegram-integration"]
+}
